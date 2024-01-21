@@ -1,0 +1,15 @@
+diff --git a/drivers/mtd/nand/spi/foresee.c b/drivers/mtd/nand/spi/foresee.c
+index e0d2d9257045..05b27341b9bd 100644
+--- a/drivers/mtd/nand/spi/foresee.c
++++ b/drivers/mtd/nand/spi/foresee.c
+@@ -22,8 +22,8 @@ static SPINAND_OP_VARIANTS(write_cache_variants,
+ 		SPINAND_PROG_LOAD(true, 0, NULL, 0));
+ 
+ static SPINAND_OP_VARIANTS(update_cache_variants,
+-		SPINAND_PROG_LOAD_X4(false, 0, NULL, 0),
+-		SPINAND_PROG_LOAD(false, 0, NULL, 0));
++		SPINAND_PROG_LOAD_X4(true, 0, NULL, 0),
++		SPINAND_PROG_LOAD(true, 0, NULL, 0));
+ 
+ static int f35sqa002g_ooblayout_ecc(struct mtd_info *mtd, int section,
+ 				    struct mtd_oob_region *region)

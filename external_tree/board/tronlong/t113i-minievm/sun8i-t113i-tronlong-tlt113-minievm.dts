@@ -1,0 +1,322 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// Copyright (C) 2022 Arm Ltd.
+/*
+ * Common peripherals and configurations for MangoPi MQ-R boards.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+
+/dts-v1/;
+
+#include <arm/allwinner/sun8i-t113s.dtsi>
+
+/ {
+	model = "Tronlong TLT113-MiniEVM";
+	compatible = "tronlong,tlt113-minievm", "allwinner,sun8i-t113i";
+
+	aliases {
+		serial2 = &uart2;
+	};
+
+	chosen {
+		stdout-path = "serial2:115200n8";
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led-0 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_STATUS;
+			gpios = <&pio 2 0 GPIO_ACTIVE_HIGH>; /* PC0 */
+			linux,default-trigger = "heartbeat";
+		};
+
+		led-1 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_DISK;
+			gpios = <&pio 2 1 GPIO_ACTIVE_HIGH>; /* PC1 */
+			linux,default-trigger = "mtd";
+		};
+
+		led-2 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_HEARTBEAT;
+			gpios = <&pio 6 11 GPIO_ACTIVE_HIGH>; /* PG11 */
+			linux,default-trigger = "default-on";
+		};
+
+	};
+
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		ddc-i2c-bus = <&i2c0>;
+		label = "hdmi";
+		type = "a";
+
+		port {
+			hdmi_connector_in: endpoint {
+				remote-endpoint = <&bridge_hdmi_out>;
+			};
+		};
+	};
+
+	/* EC2232E DC/DC regulator on SoM */
+	reg_vcc5v: regulator-5v {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	/* EC2232E DC/DC regulator on SoM */
+	reg_3v3: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&reg_vcc5v>;
+	};
+
+	/* EC2232E DC/DC regulator on SoM, also supplying VDD-SYS */
+	reg_vcc_core: regulator-core {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-core";
+		regulator-min-microvolt = <880000>;
+		regulator-max-microvolt = <880000>;
+		vin-supply = <&reg_vcc5v>;
+	};
+
+	reg_vbus_supply: regulator-vbus-otg {
+		compatible = "regulator-fixed";
+		regulator-name = "vbus-otg";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 1 12 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&reg_vcc5v>;
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&reg_vcc_core>;
+};
+
+&cpu1 {
+	cpu-supply = <&reg_vcc_core>;
+};
+
+&wdt {
+	status = "okay";
+};
+
+&dcxo {
+	clock-frequency = <24000000>;
+};
+
+&ehci1 {
+	status = "okay";
+};
+
+&ohci1 {
+	status = "okay";
+};
+
+&pio {
+	vcc-pb-supply = <&reg_3v3>;
+	vcc-pd-supply = <&reg_3v3>;
+	vcc-pe-supply = <&reg_3v3>;
+	vcc-pf-supply = <&reg_3v3>;
+	vcc-pg-supply = <&reg_3v3>;
+
+	uart2_pg_pins: uart2-pg-pins {
+		pins = "PG17", "PG18";
+		function = "uart2";
+	};
+
+	rgmii_pg_pins: rgmii-pg-pins {
+		pins = "PG0", "PG1", "PG2", "PG3", "PG4",
+			"PG5", "PG6", "PG7", "PG8", "PG9",
+			"PG10", "PG12", "PG14", "PG15";
+		function = "emac";
+	};
+
+	i2c0_pins: i2c0-pins {
+		pins = "PB10", "PB11";
+		function = "i2c0";
+	};
+
+	i2c2_pins: i2c2-pins {
+		pins = "PE12", "PE13";
+		function = "i2c2";
+	};
+
+	spi0_misc_pins: spi0-misc-pins {
+		pins = "PC6", "PC7";
+		function = "spi0";
+	};
+};
+
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pg_pins>;
+	status = "okay";
+};
+
+&mmc0 {
+	pinctrl-0 = <&mmc0_pins>;
+	pinctrl-names = "default";
+	vmmc-supply = <&reg_3v3>;
+	cd-gpios = <&pio 5 6 GPIO_ACTIVE_LOW>;
+	disable-wp;
+	bus-width = <4>;
+	status = "okay";
+};
+
+&emac {
+	pinctrl-0 = <&rgmii_pg_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+	phy-handle = <&ephy>;
+	phy-mode = "rgmii-id";
+	allwinner,tx-delay-ps = <200>;
+	allwinner,rx-delay-ps = <0>;
+	phy-supply = <&reg_3v3>;
+};
+
+&mdio {
+	ephy: ethernet-phy@0 {
+		reg = <0>;
+		reset-gpios = <&pio 6 13 GPIO_ACTIVE_LOW>; /* PG13 */
+		rx-internal-delay-ps = <600>;
+		tx-internal-delay-ps = <450>;
+		reset-assert-us = <10000>;
+		reset-deassert-us = <1000000>;
+	};
+};
+
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+};
+
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+	status = "okay";
+
+	hdmi_lontium_lt8912: hdmi@48 {
+		compatible = "lontium,lt8912b";
+		reg = <0x48>;
+		reset-gpios = <&pio 4 11 GPIO_ACTIVE_LOW>; /* PE11 */
+		status = "okay";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				bridge_dsi_in: endpoint {
+					data-lanes = <0 1 2 3>;
+					remote-endpoint = <&host_dsi_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				bridge_hdmi_out: endpoint {
+					remote-endpoint = <&hdmi_connector_in>;
+				};		
+			};
+		};
+	};
+	tcpc@60 {
+		compatible = "willsemi,wusb3801";
+		reg = <0x60>;
+		interrupt-parent = <&pio>;
+		interrupts = <4 3 IRQ_TYPE_LEVEL_LOW>; /* PE3 */
+ 
+		connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			vbus-supply = <&reg_vbus_supply>;
+			power-role = "source";
+			data-role = "dual";
+			typec-power-opmode = "default";
+			pd-disable;
+        	};
+	};
+};
+
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins &spi0_misc_pins>;
+	status = "okay";
+
+	spi_nand@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <80000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+		partitions {
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			compatible = "fixed-partitions";
+			partition@0 {
+				label = "u-boot";
+				reg = <0x0 0x100000>; /* 1MB */
+			};
+
+			partition@100000 {
+				label = "env";
+				reg = <0x100000 0x400000>; /* 4MB */
+			};
+
+			partition@500000 {
+				label = "rootfs";
+				reg = <0x500000 0xfb00000>; /* 251MB */
+			};
+		};
+	};
+};
+
+&dsi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port {
+			host_dsi_out: endpoint {
+				remote-endpoint = <&bridge_dsi_in>;
+			};
+		};
+	};
+};
+
+&dphy {
+	status = "okay";
+};
+
+&tcon_top {
+	status = "okay";
+};
+
+&tcon_lcd0 {
+	status = "okay";
+};
+
+&usb_otg {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usbphy {
+	usb1_vbus-supply = <&reg_vcc5v>;
+	status = "okay";
+};
