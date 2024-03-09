@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_t113_mini_PATH/package/ms-tools/Config.in"
